@@ -1,0 +1,127 @@
+
+
+"scripts": {
+"start": "node app"
+}
+
+app.js
+=======
+if(process.env.NODE_ENV === 'production'){
+    mongoose.connect(process.env.MONGODB_URI);
+} else {
+    mongoose.connect('mongodb://localhost/conduit');
+}
+
+---------- 
+
+Deploy the application
+
+BACKEND
+
+Create an account on Heroku
+===========
+https://signup.heroku.com/
+
+Create a new Heroku application
+=======
+heroku create
+heroku git:remote -a app-name-here
+
+Add a Mongo database instance to your Heroku application
+==========
+heroku addons:create mongolabs:sandbox
+
+Push your application to Heroku
+=========
+git push heroku master
+
+---------------
+
+FRONTEND
+
+Cloud hosting
+
+Amazon S3
+
+- Create a new Bucket on Amazon S3
+
+- Enable static website hosting for your bucket
+In the S3 console, view the properties of the newly created bucket and click on the "Static Website Hosting" dropdown. Hit the "Enable website hosting" radio button and set the "Index Document" to index.html
+
+- Install the s3 npm package
+npm install --save-dev s3
+The package should be saved as a dev dependency unless you're using it elsewhere from within your application.
+
+- Create a script to upload a directory to S3
+In the root of your project next to package.json, create a file named deploy.js with the following:
+```
+var s3 = require('s3');
+var config = require('./deploy.config');
+
+var client = s3.createClient({
+  s3Options: {
+    accessKeyId: config.AwsAccessKeyId,
+    secretAccessKey: config.AwsSecretAccessKey,
+    region: config.BucketRegion
+  }
+});
+
+var uploader = client.uploadDir({
+  localDir: process.argv[2],
+  s3Params: {
+    Bucket: config.Bucket,
+    ACL: 'public-read'
+  }
+});
+
+uploader.on('complete', function(){
+    console.log(process.argv[2]+' uploaded to S3 bucket '+config.Bucket);
+}
+```
+We'll need to create a configuration file to populate our config variables in the next step.
+
+The localDir parameter for the uploadDir parameter specifies which directory to upload and can be a relative path. We're setting to to read from process.argv[2] so the folder that gets uploaded depends on what was passed to the command when it was run.
+
+- Create configuration
+Next to your package.json file, create a new file named deploy.config.json:
+```
+{
+  "AwsAccessKeyId": "AK...Z",
+  "AwsSecretAccessKey": "JcyN...02eK",
+  "Bucket": "conduit.example.com",
+  "BucketRegion": "us-west-2"
+}
+```
+You'll need to fill in your own AWS credentials and bucket information.
+
+- Add deploy.config.json to your .gitignore file
+deploy.config.json contains sensitive values and should be kept out of your version control.
+
+- Create an npm script for deploying
+"scripts": {
+	"deploy": "NODE_ENV=production node deploy dist"
+},
+
+If your project has a build script and you wish to run it automatically before deploys, you can run it before the deploy script. For example, if your app's build command is gulp build and it builds your application to the dist folder, your deploy script command would be NODE_ENV=production gulp build && node deploy dist
+
+Now we should be able to run npm run deploy and our application will be uploaded to Amazon S3!
+
+------------------- 
+
+Firbase
+
+- npm install -g firebase-tools
+- Log into the Firebase CLI
+- firebase init
+- Run your existing build task to compile your application to its distribution folder.
+- run 'firebase deploy'
+
+
+
+
+
+
+
+
+
+
